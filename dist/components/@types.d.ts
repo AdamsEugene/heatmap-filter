@@ -14,6 +14,7 @@ export type DataItem = {
     option: string;
     options?: string[];
     conditions?: string[];
+    secOptions?: string[];
 };
 export type AllData = {
     condition: "and" | "or";
@@ -21,6 +22,7 @@ export type AllData = {
     action: string;
     default: string;
     value: string | number;
+    secValue: string;
     actionError: boolean;
     actionErrorMsg: string;
     conditionError: boolean;
@@ -30,9 +32,13 @@ export type AllData = {
     actionOpen: boolean;
     defaultOpen: boolean;
     valueOpen: boolean;
+    secValueOpen: boolean;
     segment?: string | null;
     name?: string;
     actionValue?: DataItem;
+    options?: string[];
+    conditions?: string[];
+    secOptions?: string[];
 };
 export interface SessionDataItem {
     definition: string;

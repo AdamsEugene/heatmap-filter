@@ -22,7 +22,7 @@
   "module": "./dist/heatmap-filter.js",
   "exports": {
     ".": {
-      "types": "./disthttps://stage9.heatmapcore.com/index.d.ts",
+      "types": "./dist/index.d.ts",
       "import": "./dist/heatmap-filter.js",
       "require": "./dist/heatmap-filter.umd.cjs"
     },
