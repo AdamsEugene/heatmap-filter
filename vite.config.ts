@@ -8,7 +8,10 @@ export default defineConfig({
   plugins: [vue(), dts(), cssInjectedByJsPlugin()],
   build: {
     lib: {
-      entry: path.resolve(__dirname, "src/index.ts"),
+      entry: path.resolve(
+        __dirname,
+        "srchttps://stage9.heatmapcore.com/index.ts"
+      ),
       name: "HeatmapFilter",
       fileName: "heatmap-filter",
     },

@@ -6,11 +6,14 @@
 
   <!-- call the HeatmapFilter -->
   <HeatmapFilter @on-filter-values-change="filterValueChanged" />
+
+  <!-- <HeatmapFilterNew /> -->
 </template>
 
 <script setup lang="ts">
 import { ReturnData } from "./components/FilterComponent.vue";
 import HeatmapFilter from "./components/HeatmapFilter.vue";
+// import HeatmapFilterNew from "heatmap-filter-new";
 
 const filterValueChanged = (value: ReturnData[]) => {
   console.log(value);

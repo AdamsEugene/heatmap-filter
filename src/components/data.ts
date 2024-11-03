@@ -9,8 +9,8 @@ import addShoppingCart from "../assets/images/add_shopping_cart.svg";
 import payments from "../assets/images/payments.svg";
 import task from "../assets/images/task.svg";
 import partner from "../assets/images/timeline.svg";
-import session from '../assets/images/sessiontag.svg'
-import nonPur from '../assets/images/Non-purchasers.svg'
+import session from "../assets/images/sessiontag.svg";
+import nonPur from "../assets/images/Non-purchasers.svg";
 
 export const sessionData: SessionDataItem[] = [
   {

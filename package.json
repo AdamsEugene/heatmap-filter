@@ -1,11 +1,11 @@
 {
   "name": "heatmap-filter",
   "private": false,
-  "version": "1.8.9",
+  "version": "1.9.4",
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/AdamsEugene/heatmap-filter"
+    "url": "git+https://github.com/AdamsEugene/heatmap-filter.git"
   },
   "keywords": [
     "filter",
@@ -22,7 +22,7 @@
   "module": "./dist/heatmap-filter.js",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
+      "types": "./disthttps://stage9.heatmapcore.com/index.d.ts",
       "import": "./dist/heatmap-filter.js",
       "require": "./dist/heatmap-filter.umd.cjs"
     },
@@ -52,6 +52,6 @@
     "vite": "^4.5.3",
     "vite-plugin-dts": "^2.3.0",
     "vue": "^3.4.38",
-    "vue-tsc": "^1.8.26"
+    "vue-tsc": "^2.0.29"
   }
 }

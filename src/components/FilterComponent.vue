@@ -349,40 +349,30 @@ const disableCompareButton = computed(() => {
   );
 });
 
-function onItemSelected(item: Item, custom: boolean) {
-  if (!item.name) {
+function onItemSelected(item: Item | any, custom: boolean) {
+  if (!item.name && !custom) {
     customData.value = customData.value.filter(
       (filter) => filter.id !== item.id
     );
     return;
   }
+
+  if (typeof item.id === "number" && custom) {
+    customData.value = customData.value.filter(
+      (filter) => filter.id !== item.id
+    );
+    return;
+  }
+
   if (custom) {
-    let noChanges = true;
-    customData.value = customData.value.map((filter) => {
-      if (filter.id === item.id) {
-        noChanges = false;
-        return {
-          ...filter,
-          title: item.name,
-          definition: item.definition,
-          rawValues: item.rawValues,
-        };
-      }
-      return filter;
-    });
-    if (noChanges)
-      customData.value = [
-        {
-          definition: item.definition,
-          iconSrc: task,
-          idsegment: 2,
-          name: item.name,
-          title: item.name,
-          isDefinitionValueSet: true,
-          rawValues: item.rawValues,
-        },
-        ...customData.value,
-      ];
+    customData.value = item.map((filter: any) => ({
+      ...filter,
+      name: item.title,
+      rawValues: item.data,
+      iconSrc: task,
+      idsegment: 2,
+      isDefinitionValueSet: true,
+    }));
   }
 
   if (modalData.value) {
@@ -463,7 +453,7 @@ const fetchCustomFilters = async () => {
   const requestOptions = { method: "POST", body };
 
   const url =
-    "/index.php?module=API&format=json&method=API.processCustomFilters";
+    "https://stage9.heatmapcore.com/index.php?module=API&format=json&method=API.processCustomFilters";
 
   fetch(url, requestOptions)
     .then((response) => response.json())
@@ -675,7 +665,7 @@ onMounted(() => {
               transition: all 0.3s ease-in-out;
               text-overflow: ellipsis;
               overflow: hidden;
-              /* width: 138px; */
+              width: 138px;
               /* white-space: break-spaces; */
             }
 

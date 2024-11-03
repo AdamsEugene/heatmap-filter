@@ -195,11 +195,24 @@
                 </transition>
               </div>
             </div>
-            <div v-if="data?.showSign" class="filter_content_dropdown">
-              <p class="dropdown_title">{{ SecondLabelMap(data?.name) }}</p>
+            <div
+              v-if="data?.showSign || item.options?.length"
+              class="filter_content_dropdown"
+            >
+              <p class="dropdown_title">
+                {{
+                  item.action === "Session Tag"
+                    ? "Session Tag Name"
+                    : SecondLabelMap(data?.name)
+                }}
+              </p>
               <div class="dropdown_body_wrapper">
                 <div
-                  v-if="item.actionValue?.options?.length || tagOptions?.length"
+                  v-if="
+                    item.actionValue?.options?.length ||
+                    tagOptions?.length ||
+                    item.options?.length
+                  "
                   class="arrow_button_wrapper"
                   :class="{ we_have_error: item.valueError }"
                   @click="toggleDropdown('value', item.index)"
@@ -211,10 +224,12 @@
                   :class="{
                     second_one: data?.name === 'Average Order Value',
                     has_arrow:
-                      item.actionValue?.options?.length || tagOptions?.length,
+                      item.actionValue?.options?.length ||
+                      tagOptions?.length ||
+                      item.options?.length,
                   }"
                   :type="
-                    item.actionValue?.options?.length
+                    item.actionValue?.options?.length || item.options?.length
                       ? 'text'
                       : item.actionValue?.option === 'number'
                       ? 'number'
@@ -240,14 +255,16 @@
                   <ul
                     v-show="
                       item.valueOpen &&
-                      (item.actionValue?.options || tagOptions)?.length
+                      (item.actionValue?.options || tagOptions || item.options)
+                        ?.length
                     "
                     class="dropdown_menu_wrapper"
                     :class="{ align_center: touchingBottom }"
                   >
                     <li
                       v-for="(option, index) in item.actionValue?.options ||
-                      tagOptions"
+                      tagOptions ||
+                      item.options"
                       :key="option + index"
                       class="dropdown_menu_item"
                       :class="{
@@ -256,6 +273,76 @@
                           option === item.value,
                       }"
                       @click="selectItem(option, 'value', item.index, data)"
+                    >
+                      {{ option }}
+                    </li>
+                  </ul>
+                </transition>
+              </div>
+            </div>
+            <div
+              v-if="
+                data?.showSign &&
+                (item.secOptions?.length ||
+                  sessionTagValues?.[index]?.length ||
+                  item.secValue)
+              "
+              class="filter_content_dropdown"
+            >
+              <p class="dropdown_title">{{ "Tag Value" }}</p>
+              <div class="dropdown_body_wrapper">
+                <div
+                  v-if="
+                    item.secOptions?.length || sessionTagValues?.[index]?.length
+                  "
+                  class="arrow_button_wrapper"
+                  :class="{ we_have_error: item.valueError }"
+                  @click="toggleDropdown('secValue', item.index)"
+                >
+                  <arrow-svg :isDropdownOpen="item.secValueOpen" />
+                </div>
+                <input
+                  class="dropdown_body"
+                  :class="{
+                    has_arrow:
+                      item.secOptions?.length ||
+                      sessionTagValues?.[index]?.length,
+                  }"
+                  :type="
+                    item.secOptions?.length || sessionTagValues?.[index]?.length
+                      ? 'text'
+                      : 'number'
+                  "
+                  :placeholder="SecondPlaceholderMap(data?.name)"
+                  @input="filterItems('secValue', item.index)"
+                  v-model="item.secValue"
+                  @blur="handleBlur()"
+                  @focus="openDropdown('secValue', item.index)"
+                />
+                <p v-if="item.valueError" class="error_message">
+                  {{ item.valueErrorMsg }}
+                </p>
+                <transition name="dropdown">
+                  <ul
+                    v-show="
+                      item.secValueOpen &&
+                      (item.secOptions?.length ||
+                        sessionTagValues?.[index]?.length)
+                    "
+                    class="dropdown_menu_wrapper"
+                    :class="{ align_center: touchingBottom }"
+                  >
+                    <li
+                      v-for="(option, _index) in sessionTagValues?.[index] ||
+                      item.secOptions"
+                      :key="option + _index"
+                      class="dropdown_menu_item"
+                      :class="{
+                        activeClass:
+                          String(item.value).split(', ').includes(option) ||
+                          option === item.value,
+                      }"
+                      @click="selectItem(option, 'secValue', item.index, data)"
                     >
                       {{ option }}
                     </li>
@@ -382,6 +469,8 @@ type GroupedData = {
   [category: string]: DataItem[];
 };
 
+type WHAT = "default" | "action" | "value" | "secValue";
+
 const options = {
   number: {
     "==": "Equal To",
@@ -447,11 +536,16 @@ const inputValue = ref<number | string>("");
 const filterName = ref<string>(getTextTitle());
 const filterNameError = ref(false);
 const filterNameErrorMessage = ref("");
+const sessionTagsData = ref<{ [x: string]: string[] }>();
+const sessionTagValues = ref<{ [x: number]: string[] }>({});
 const loading = ref<boolean>(false);
 const allActionValues = ref<{ conditions: string[]; options: string[] }>({
   conditions: [],
   options: [],
 });
+const allValuesForSearch = ref<{ [x: string]: string[] }>({});
+const allSecValuesForSearch = ref<{ [x: string]: string[] }>({});
+
 // const actionValue = ref<DataItem>();
 const touchingBottom = ref(false);
 const allData = ref<AllData[]>([
@@ -461,6 +555,7 @@ const allData = ref<AllData[]>([
     action: "",
     default: "",
     value: "",
+    secValue: "",
     actionError: false,
     actionErrorMsg: "",
     conditionError: false,
@@ -470,17 +565,75 @@ const allData = ref<AllData[]>([
     actionOpen: false,
     defaultOpen: false,
     valueOpen: false,
+    secValueOpen: false,
     actionValue: undefined,
   },
 ]);
 
-if (props.data?.edit) {
-  let allDataClone: AllData[] = [];
-  props.data.rawValues?.forEach((value: CustomValues, index: number) => {
-    allDataClone.push({ ...allData.value[0], index, ...value });
-  });
-  allData.value = allDataClone;
-}
+const useEntryPage = (segment: string) => {
+  return ["exitPageUrl", "entryPageUrl", "pageUrl"].includes(segment)
+    ? "entryPageUrl"
+    : segment;
+};
+
+const getItemFromUrl = (item: string) => {
+  const parsedUrl = new URL(currentUrl.value);
+  const searchParams = new URLSearchParams(parsedUrl.search);
+  const hashParams = new URLSearchParams(parsedUrl.hash.slice(1));
+
+  return searchParams.get(item) || hashParams.get(item) || "";
+};
+
+const dynamicallyFetchOptions = async (segment?: string) => {
+  if (!segment) return;
+  loading.value = true;
+
+  const url = `https://stage9.heatmapcore.com/index.php?idSite=${getItemFromUrl(
+    "idSite"
+  )}&idSiteHsr=${getItemFromUrl(
+    "subcategory"
+  )}&method=API.getSuggestedValuesForSegment&module=API&segmentName=${useEntryPage(
+    segment
+  )}`;
+
+  try {
+    const response = await fetch(url);
+    if (!response.ok) return undefined;
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.log({ error });
+    return undefined;
+  } finally {
+    loading.value = false;
+  }
+};
+
+const updateOptions = async (
+  item: AllData,
+  index: number,
+  selected?: string | number
+) => {
+  if (item.options?.length === 0 || !item.options) {
+    const options = await dynamicallyFetchOptions(item.segment!);
+    if (item.name === "Session Tag") {
+      sessionTagsData.value = options;
+      if (options) item.options = Object.keys(options || {});
+      if (selected) {
+        item.secOptions =
+          Object.values((sessionTagsData.value as any)?.[selected]) || [];
+      }
+    } else {
+      if (options) item.options = options;
+    }
+  }
+  if (item.options) {
+    allValuesForSearch.value[index] = item.options;
+  }
+  if (item.secOptions) {
+    allSecValuesForSearch.value[index] = item.secOptions;
+  }
+};
 
 // console.log(props.savedFilters);
 
@@ -499,17 +652,20 @@ const isElementTouchingBottom = (
   );
 };
 
-const fieldToUpdate = (what: "default" | "action" | "value") =>
+// const noSessionTags = computed(
+//   () => sessionTagsData.value && Object.keys(sessionTagsData.value).length > 0
+// );
+
+const fieldToUpdate = (what: WHAT) =>
   what === "action"
     ? "actionOpen"
     : what === "default"
     ? "defaultOpen"
+    : what === "secValue"
+    ? "secValueOpen"
     : "valueOpen";
 
-const toggleDropdown = (
-  what: "default" | "action" | "value",
-  index: number
-) => {
+const toggleDropdown = (what: WHAT, index: number) => {
   // closeDropdown();
   allData.value = allData.value.map((data) =>
     data.index === index
@@ -522,7 +678,7 @@ const toggleDropdown = (
   }, 10);
 };
 
-const openDropdown = (what: "default" | "action" | "value", index: number) => {
+const openDropdown = (what: WHAT, index: number) => {
   closeDropdown();
   allData.value = allData.value.map((data) =>
     data.index === index ? { ...data, [fieldToUpdate(what)]: true } : data
@@ -538,6 +694,7 @@ const closeDropdown = () => {
     valueOpen: false,
     defaultOpen: false,
     actionOpen: false,
+    secValueOpen: false,
   }));
 };
 
@@ -551,14 +708,25 @@ const handleBlur = () => {
   setTimeout(() => closeDropdown(), 100); // Delay to allow item selection
 };
 
-// console.log(props.data);
-
 const selectItem = (
   item: string,
-  what: "default" | "action" | "value",
+  what: WHAT,
   index: number,
   actionValue?: CombinedFilter
 ) => {
+  if (sessionTagsData.value && what === "value") {
+    if (!sessionTagValues.value[index]) {
+      sessionTagValues.value[index] = [];
+    }
+    sessionTagValues.value[index] = sessionTagsData.value[item] || [];
+
+    allData.value = allData.value.map((data) =>
+      data.index === index ? { ...data, secValue: "" } : data
+    );
+    if (sessionTagValues.value[index]) {
+      allSecValuesForSearch.value[index] = sessionTagValues.value[index];
+    }
+  }
   if (props.data?.name === "Create Custom Filter") {
     allData.value = allData.value.map((data) =>
       data.index === index ? { ...data, [what]: item } : data
@@ -648,8 +816,17 @@ const innerItemSelected = async (item: DataItem, index: number) => {
   if (props.data?.name === "Create Custom Filter") {
     if (item.options?.length === 0) {
       const options = await dynamicallyFetchOptions(item.segment!);
-      if (options) item.options = options;
+      if (item.name === "Session Tag") {
+        sessionTagsData.value = options;
+        if (options) item.options = Object.keys(options || {});
+      } else {
+        if (options) item.options = options;
+      }
     }
+  }
+
+  if (item.options) {
+    allValuesForSearch.value[index] = item.options;
   }
 
   const _index = allData.value.findIndex((data) => data.index === index);
@@ -672,7 +849,7 @@ const deleteFilter = () => {
   loading.value = true;
   const requestOptions = { method: "POST", body: dataToDb };
   const url =
-    "/index.php?module=API&format=json&method=API.processCustomFilters";
+    "https://stage9.heatmapcore.com/index.php?module=API&format=json&method=API.processCustomFilters";
 
   fetch(url, requestOptions)
     .then((response) => response.json())
@@ -681,6 +858,7 @@ const deleteFilter = () => {
         loading.value = false;
         return;
       }
+
       emit("item-selected", { id: props.data?.id }, true);
       loading.value = false;
       props.closeSelectModal();
@@ -726,12 +904,17 @@ const next = () => {
   if (!valid) return;
 
   if (props.data?.name === "Create Custom Filter") {
+    // sessionTagName==;sessionTagValue=="
     const returnData = allData.value
-      .map(
-        (data) =>
-          data.segment +
-          conditions[data.default as keyof typeof conditions] +
-          data.value
+      .map((data) =>
+        data.action === "Session Tag"
+          ? "sessionTagName==" +
+            data.value +
+            ";sessionTagValue==" +
+            data.secValue
+          : data.segment +
+            conditions[data.default as keyof typeof conditions] +
+            data.value
       )
       .join(";");
 
@@ -741,6 +924,7 @@ const next = () => {
       name: data.name,
       segment: data.segment,
       value: data.value,
+      secValue: data.secValue,
     }));
 
     const dataToDb = JSON.stringify({
@@ -757,7 +941,7 @@ const next = () => {
     const requestOptions = { method: "POST", body: dataToDb };
 
     const url =
-      "/index.php?module=API&format=json&method=API.processCustomFilters";
+      "https://stage9.heatmapcore.com/index.php?module=API&format=json&method=API.processCustomFilters";
 
     fetch(url, requestOptions)
       .then((response) => response.json())
@@ -767,16 +951,7 @@ const next = () => {
           return;
         }
         // console.log(result);
-        emit(
-          "item-selected",
-          {
-            name: filterName.value,
-            definition: returnData,
-            rawValues: restData,
-            id: props.data?.id,
-          },
-          true
-        );
+        emit("item-selected", result.filters, true);
         loading.value = false;
         props.closeSelectModal();
       })
@@ -828,7 +1003,9 @@ const next = () => {
       emit("item-selected", {
         name: `${props.data?.name}: ${allData.value[0].default}=${allData.value[0].value}`,
         definition: encodeURI(returnData),
-        rawValues:  ["variant", "view"].includes(currentData.default) ? returnObj : "",
+        rawValues: ["variant", "view"].includes(currentData.default)
+          ? returnObj
+          : "",
       });
       props.closeSelectModal();
       return;
@@ -846,7 +1023,7 @@ const next = () => {
         returnData += `;experienceId==${experiment.value?.experiment_id}`;
       emit("item-selected", {
         name: `${props.data?.name}: ${allData.value[0].value}`,
-        definition: encodeURI(returnData),
+        definition: encodeURI(removeVariantSuffix(returnData)),
         rawValues: returnObj,
       });
       props.closeSelectModal();
@@ -868,6 +1045,10 @@ const next = () => {
     }
   }
 };
+
+function removeVariantSuffix(str: string): string {
+  return str.replace(/(\s*\(\d+\))(?=[;]|$)/g, "");
+}
 
 const extractInfoFromUrl = (url?: string): string => {
   try {
@@ -918,10 +1099,10 @@ const handleDocumentClick = (event: MouseEvent) => {
   }
 };
 
-const filterItems = (what: "default" | "action" | "value", index: number) => {
-  const searchText = (allData.value.find((d) => d.index === index) as any)?.[
-    what
-  ]?.toLowerCase();
+const filterItems = (what: WHAT, index: number) => {
+  const searchText = String(
+    (allData.value.find((d) => d.index === index) as any)?.[what]
+  )?.toLowerCase();
 
   const _index = allData.value.findIndex((data) => data.index === index);
   // if (_index > 0)
@@ -939,7 +1120,7 @@ const filterItems = (what: "default" | "action" | "value", index: number) => {
     }
   }
 
-  if (what === "value") {
+  if (what === "value" && props.data?.name !== "Create Custom Filter") {
     if (allData.value[_index].actionValue?.options) {
       allData.value[_index].actionValue!.options =
         allActionValues.value?.options?.filter((item) =>
@@ -951,6 +1132,27 @@ const filterItems = (what: "default" | "action" | "value", index: number) => {
       );
     }
   }
+
+  if (what === "value" && props.data?.name === "Create Custom Filter") {
+    if (allData.value[_index]?.options) {
+      allData.value[_index]!.options = allValuesForSearch.value[index]?.filter(
+        (item) => item.toLowerCase().includes(searchText)
+      );
+    } else {
+      tagOptions.value = allValuesForSearch.value[index]?.filter((item) =>
+        item.toLowerCase().includes(searchText)
+      );
+    }
+  }
+
+  if (what === "secValue") {
+    if (allData.value[_index]?.secOptions) {
+      allData.value[_index]!.secOptions = allSecValuesForSearch.value[
+        index
+      ]?.filter((item) => item.toLowerCase().includes(searchText));
+    }
+  }
+
   if (what === "action") {
     actionItems.value = actionItemsSearch(allActionItems.value, searchText);
   }
@@ -1026,6 +1228,7 @@ const addCustomFilter = (condition: "and" | "or") => {
       action: "",
       default: "",
       value: "",
+      secValue: "",
       actionError: false,
       actionErrorMsg: "",
       conditionError: false,
@@ -1035,6 +1238,7 @@ const addCustomFilter = (condition: "and" | "or") => {
       actionOpen: false,
       defaultOpen: false,
       valueOpen: false,
+      secValueOpen: false,
     },
   ];
 };
@@ -1136,22 +1340,14 @@ const SecondPlaceholderMap = (inputType?: string) => {
   return map[inputType || ""];
 };
 
-const getItemFromUrl = (item: string) => {
-  const parsedUrl = new URL(currentUrl.value);
-  const searchParams = new URLSearchParams(parsedUrl.search);
-  const hashParams = new URLSearchParams(parsedUrl.hash.slice(1));
-
-  return searchParams.get(item) || hashParams.get(item) || "";
-};
-
-// /index.php?idSite=4&idSiteHsr=6278&method=API.getSuggestedValuesForSegment&module=API&segmentName=entryPageUrl
+// https://stage9.heatmapcore.com/index.php?idSite=4&idSiteHsr=6278&method=API.getSuggestedValuesForSegment&module=API&segmentName=entryPageUrl
 
 const fetchSegmentData = async () => {
   loading.value = true;
   const [segmentName] = props.data?.definition?.split("==") || "";
   // const token = localStorage.getItem("heatUserId");
 
-  const url = `/index.php?idSite=${getItemFromUrl(
+  const url = `https://stage9.heatmapcore.com/index.php?idSite=${getItemFromUrl(
     "idSite"
   )}&idSiteHsr=${getItemFromUrl(
     "subcategory"
@@ -1186,37 +1382,6 @@ const fetchSegmentData = async () => {
       // console.log({ error });
       loading.value = false;
     });
-};
-
-const useEntryPage = (segment: string) => {
-  return ["exitPageUrl", "entryPageUrl", "pageUrl"].includes(segment)
-    ? "entryPageUrl"
-    : segment;
-};
-
-const dynamicallyFetchOptions = async (segment?: string) => {
-  if (!segment) return;
-  loading.value = true;
-
-  const url = `/index.php?idSite=${getItemFromUrl(
-    "idSite"
-  )}&idSiteHsr=${getItemFromUrl(
-    "subcategory"
-  )}&method=API.getSuggestedValuesForSegment&module=API&segmentName=${useEntryPage(
-    segment
-  )}`;
-
-  try {
-    const response = await fetch(url);
-    if (!response.ok) return undefined;
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.log({ error });
-    return undefined;
-  } finally {
-    loading.value = false;
-  }
 };
 
 const makeRequestFor = (filter?: string): boolean => {
@@ -1268,6 +1433,35 @@ onBeforeUnmount(() => {
 watch(filterName, () => {
   validateFilterName();
 });
+
+watch(
+  () => props.data,
+  async () => {
+    if (props.data?.edit) {
+      let allDataClone: AllData[] = [];
+
+      (props.data.rawValues || (props.data as any).data)?.forEach(
+        (value: CustomValues, index: number) => {
+          allDataClone.push({
+            ...allData.value[0],
+            index,
+            ...value,
+            options: [],
+            secOptions: [],
+          });
+        }
+      );
+      await Promise.all(
+        allDataClone.map((item, index) =>
+          updateOptions(item, index, item.value)
+        )
+      );
+      allData.value = allDataClone;
+      // console.log(allData.value);
+    }
+  },
+  { deep: true, immediate: true }
+);
 </script>
 
 <style scoped>
