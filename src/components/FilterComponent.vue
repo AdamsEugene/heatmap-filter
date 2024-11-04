@@ -367,8 +367,8 @@ function onItemSelected(item: Item | any, custom: boolean) {
   if (custom) {
     customData.value = item.map((filter: any) => ({
       ...filter,
-      name: item.title,
-      rawValues: item.data,
+      name: filter.title,
+      rawValues: filter.data,
       iconSrc: task,
       idsegment: 2,
       isDefinitionValueSet: true,
@@ -453,7 +453,7 @@ const fetchCustomFilters = async () => {
   const requestOptions = { method: "POST", body };
 
   const url =
-    "/index.php?module=API&format=json&method=API.processCustomFilters";
+    "https://stage9.heatmapcore.com/index.php?module=API&format=json&method=API.processCustomFilters";
 
   fetch(url, requestOptions)
     .then((response) => response.json())
