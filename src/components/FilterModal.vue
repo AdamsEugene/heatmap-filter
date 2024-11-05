@@ -209,8 +209,8 @@
               <div class="dropdown_body_wrapper">
                 <div
                   v-if="
-                    item.actionValue?.options?.length ||
                     tagOptions?.length ||
+                    item.actionValue?.options?.length ||
                     item.options?.length
                   "
                   class="arrow_button_wrapper"
@@ -224,8 +224,8 @@
                   :class="{
                     second_one: data?.name === 'Average Order Value',
                     has_arrow:
-                      item.actionValue?.options?.length ||
                       tagOptions?.length ||
+                      item.actionValue?.options?.length ||
                       item.options?.length,
                   }"
                   :type="
@@ -255,15 +255,15 @@
                   <ul
                     v-show="
                       item.valueOpen &&
-                      (item.actionValue?.options || tagOptions || item.options)
+                      (tagOptions || item.actionValue?.options || item.options)
                         ?.length
                     "
                     class="dropdown_menu_wrapper"
                     :class="{ align_center: touchingBottom }"
                   >
                     <li
-                      v-for="(option, index) in item.actionValue?.options ||
-                      tagOptions ||
+                      v-for="(option, index) in tagOptions ||
+                      item.actionValue?.options ||
                       item.options"
                       :key="option + index"
                       class="dropdown_menu_item"
@@ -588,7 +588,7 @@ const dynamicallyFetchOptions = async (segment?: string) => {
   if (!segment) return;
   loading.value = true;
 
-  const url = `https://stage9.heatmapcore.com/index.php?idSite=${getItemFromUrl(
+  const url = `/index.php?idSite=${getItemFromUrl(
     "idSite"
   )}&idSiteHsr=${getItemFromUrl(
     "subcategory"
@@ -849,7 +849,7 @@ const deleteFilter = () => {
   loading.value = true;
   const requestOptions = { method: "POST", body: dataToDb };
   const url =
-    "https://stage9.heatmapcore.com/index.php?module=API&format=json&method=API.processCustomFilters";
+    "/index.php?module=API&format=json&method=API.processCustomFilters";
 
   fetch(url, requestOptions)
     .then((response) => response.json())
@@ -941,7 +941,7 @@ const next = () => {
     const requestOptions = { method: "POST", body: dataToDb };
 
     const url =
-      "https://stage9.heatmapcore.com/index.php?module=API&format=json&method=API.processCustomFilters";
+      "/index.php?module=API&format=json&method=API.processCustomFilters";
 
     fetch(url, requestOptions)
       .then((response) => response.json())
@@ -1340,14 +1340,14 @@ const SecondPlaceholderMap = (inputType?: string) => {
   return map[inputType || ""];
 };
 
-// https://stage9.heatmapcore.com/index.php?idSite=4&idSiteHsr=6278&method=API.getSuggestedValuesForSegment&module=API&segmentName=entryPageUrl
+// /index.php?idSite=4&idSiteHsr=6278&method=API.getSuggestedValuesForSegment&module=API&segmentName=entryPageUrl
 
 const fetchSegmentData = async () => {
   loading.value = true;
   const [segmentName] = props.data?.definition?.split("==") || "";
   // const token = localStorage.getItem("heatUserId");
 
-  const url = `https://stage9.heatmapcore.com/index.php?idSite=${getItemFromUrl(
+  const url = `/index.php?idSite=${getItemFromUrl(
     "idSite"
   )}&idSiteHsr=${getItemFromUrl(
     "subcategory"
